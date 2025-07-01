@@ -1,0 +1,61 @@
+name: Build and Release Twelve APK
+
+on:
+  push:
+    branches:
+      - main  # Ana dalınızın adı
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'  # Gerekli Java sürümünü belirtin
+
+      - name: Build Twelve
+        run: |
+          cd android_packages_apps_Twelve
+          ./gradlew assembleRelease  # APK'yı derlemek için gerekli komut
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v2
+        with:
+          name: Twelve-APK
+          path: android_packages_apps_Twelve/build/outputs/apk/release/*.apk  # Derlenen APK'nın yolu
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          release_name: Release ${{ github.event.release.tag_name }}
+          body: |
+            Yeni Twelve sürümü yayınlandı!
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: android_packages_apps_Twelve/build/outputs/apk/release/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
